@@ -4,53 +4,84 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>战时巴蜀妇女期刊数据库</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.1.0/style.css" />
+    <!-- 引入 Leaflet 地图样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+        :root {
+            --bg-color: #f8f6f0;      
+            --card-bg: #ffffff;
+            --text-main: #2c3e50;
+            --text-sub: #7f8c8d;
+            --accent: #8b5a2b;        
+            --accent-hover: #6e461f;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Microsoft YaHei', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        body { font-family: 'LXGW WenKai', 'Microsoft YaHei', sans-serif; background-color: var(--bg-color); color: var(--text-main); line-height: 1.6; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         
         /* 顶部导航 */
-        .nav { display: flex; gap: 20px; padding: 15px 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 30px; }
-        .nav a { text-decoration: none; color: #64748b; font-weight: bold; cursor: pointer; padding: 5px 10px; border-radius: 5px; transition: 0.2s; }
-        .nav a:hover, .nav a.active { background: #e0e7ff; color: #4338ca; }
+        .nav { display: flex; gap: 20px; padding: 20px 0; border-bottom: 1px solid #e0dcd3; margin-bottom: 30px; }
+        .nav a { text-decoration: none; color: var(--text-sub); font-weight: bold; cursor: pointer; padding: 8px 16px; border-radius: 8px; transition: 0.3s; font-size: 16px; }
+        .nav a:hover, .nav a.active { background: #eaddd1; color: var(--accent); }
         
         /* 欢迎区 */
-        .hero { background: #eff6ff; padding: 40px; border-radius: 12px; margin-bottom: 30px; text-align: center; }
-        .hero h1 { color: #1e3a8a; margin-bottom: 10px; }
+        .hero { background: #fff; padding: 40px; border-radius: 16px; margin-bottom: 30px; text-align: center; box-shadow: var(--shadow); border: 1px solid rgba(0,0,0,0.03); }
+        .hero h1 { color: var(--accent); margin-bottom: 10px; font-size: 32px; letter-spacing: 2px; }
         
         /* 搜索框 */
-        .search-box { display: flex; gap: 10px; margin-bottom: 30px; }
-        .search-box input { flex: 1; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; outline: none; }
-        .search-box button { padding: 12px 25px; background: #2563eb; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 16px; box-shadow: var(--shadow); position: sticky; top: 20px; z-index: 100; backdrop-filter: blur(10px); }
+        .search-box input { flex: 1; padding: 12px 16px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 16px; outline: none; transition: 0.3s; font-family: inherit; }
+        .search-box input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139, 90, 43, 0.1); }
+        .search-box button { padding: 12px 25px; background: var(--accent); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; transition: 0.3s; font-family: inherit; }
+        .search-box button:hover { background: var(--accent-hover); }
+        .search-box button.reset { background: #e0dcd3; color: var(--text-main); }
+        .search-box button.reset:hover { background: #d4cfc4; }
         
         /* 卡片网格 */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
         
         /* 通用卡片 */
-        .card { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
-        .card h3 { color: #1e293b; margin-bottom: 10px; font-size: 18px; }
-        .card p { color: #64748b; font-size: 14px; margin-bottom: 5px; }
+        .card { background: var(--card-bg); padding: 24px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.03); box-shadow: var(--shadow); cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); animation: slideUp 0.4s ease forwards; }
+        .card:hover { transform: translateY(-6px); box-shadow: 0 12px 30px rgba(0,0,0,0.1); border-color: rgba(139, 90, 43, 0.2); }
+        .card h3 { color: var(--text-main); margin-bottom: 12px; font-size: 18px; line-height: 1.4; }
+        .card p { color: var(--text-sub); font-size: 14px; margin-bottom: 6px; }
         
         /* 文章卡片（不可点击整体） */
         .article-card { cursor: default; }
-        .article-card:hover { transform: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .article-card h3 { font-size: 16px; color: #1e3a8a; }
+        .article-card:hover { transform: translateY(-6px); box-shadow: 0 12px 30px rgba(0,0,0,0.1); }
+        .article-card h3 { font-size: 16px; color: var(--accent); }
+        .article-card .btn { margin-top: 15px; padding: 6px 16px; background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; cursor: pointer; transition: 0.3s; font-family: inherit; }
+        .article-card .btn:hover { background: var(--accent); color: #fff; }
+        
+        /* 地图容器 */
+        #leaflet-map { height: 650px; border-radius: 16px; border: 1px solid #e0dcd3; box-shadow: var(--shadow); z-index: 1; }
         
         /* 详情弹窗 */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: #fff; padding: 30px; border-radius: 12px; max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto; }
-        .close { float: right; font-size: 24px; cursor: pointer; color: #94a3b8; }
-        .intro-text { line-height: 1.8; color: #475569; margin-top: 15px; font-size: 15px; text-align: justify; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 1000; opacity: 0; transition: opacity 0.3s; }
+        .modal.show { display: flex; opacity: 1; }
+        .modal-content { background: #fff; padding: 40px; border-radius: 20px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.2); transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal.show .modal-content { transform: scale(1); }
+        .close { float: right; font-size: 28px; cursor: pointer; color: var(--text-sub); transition: color 0.2s; line-height: 1; }
+        .close:hover { color: var(--text-main); }
+        .modal-content h2 { color: var(--accent); font-size: 24px; margin-bottom: 20px; padding-right: 30px; }
+        .modal-content p { margin-bottom: 10px; font-size: 15px; border-bottom: 1px dashed #eee; padding-bottom: 8px; }
+        .modal-content strong { color: var(--text-sub); font-weight: normal; display: inline-block; width: 80px; }
+        
+        .intro-text { line-height: 1.8; color: var(--text-main); margin-top: 15px; font-size: 15px; text-align: justify; background: #faf8f5; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); }
+
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- 导航 -->
         <div class="nav">
             <a onclick="showPage('home')" id="nav-home" class="active">首页</a>
             <a onclick="showPage('journals')" id="nav-journals">刊物列表</a>
             <a onclick="showPage('articles')" id="nav-articles">文章搜索</a>
+            <!-- 新增地图导航 -->
+            <a onclick="showPage('map')" id="nav-map">馆藏地图</a>
         </div>
 
         <!-- 首页 -->
@@ -72,24 +103,32 @@
         <!-- 文章搜索 -->
         <div id="page-articles" style="display: none;">
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="输入文章标题、作者或刊物名称进行全局搜索...">
-                <button onclick="searchArticles()">🔍 搜索</button>
-                <button onclick="resetSearch()" style="background: #64748b;">重置</button>
+                <input type="text" id="searchInput" placeholder="输入文章标题、作者或刊物名称进行即时搜索...">
+                <button onclick="resetSearch()" class="reset">重置</button>
             </div>
-            <div id="article-stats" style="margin-bottom: 15px; color: #64748b;"></div>
+            <div id="article-stats" style="margin-bottom: 15px; color: var(--text-sub); text-align: right;"></div>
             <div id="article-list" class="grid"></div>
         </div>
 
         <!-- 刊物详情页 -->
         <div id="page-journal-detail" style="display: none;">
-            <a onclick="showPage('journals')" style="color: #2563eb; cursor: pointer; text-decoration: underline;">← 返回刊物列表</a>
-            <div class="hero" style="margin-top: 20px; text-align: left; background: #fff; border: 1px solid #e2e8f0;">
-                <h1 id="detail-title" style="font-size: 24px;"></h1>
-                <p id="detail-info" style="color: #64748b; margin-top: 10px; font-size: 14px;"></p>
-                <p class="intro-text" id="detail-desc"></p>
+            <a onclick="showPage('journals')" style="color: var(--accent); cursor: pointer; text-decoration: none; font-weight: bold;">← 返回刊物列表</a>
+            <div class="hero" style="margin-top: 20px; text-align: left;">
+                <h1 id="detail-title" style="font-size: 26px;"></h1>
+                <p id="detail-info" style="color: var(--text-sub); margin-top: 10px; font-size: 14px;"></p>
+                <div class="intro-text" id="detail-desc"></div>
             </div>
             <h2>本刊文章目录</h2>
             <div id="detail-articles" class="grid" style="margin-top: 20px;"></div>
+        </div>
+
+        <!-- 地图页面 (新增) -->
+        <div id="page-map" style="display: none;">
+            <div class="hero" style="text-align: left; margin-bottom: 20px; padding: 20px 40px;">
+                <h1 style="font-size: 24px;">馆藏地理分布</h1>
+                <p>根据文章中记录的“馆藏信息”自动生成，圆圈大小代表该地收录的文献数量。</p>
+            </div>
+            <div id="leaflet-map"></div>
         </div>
     </div>
 
@@ -97,19 +136,22 @@
     <div id="myModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
-            <h2 id="modalTitle" style="margin-bottom: 15px; color: #1e3a8a;"></h2>
-            <p style="margin-bottom: 8px;"><strong>所属刊物：</strong><span id="modalJournal"></span></p>
-            <p style="margin-bottom: 8px;"><strong>作者：</strong><span id="modalAuthor"></span></p>
-            <p style="margin-bottom: 8px;"><strong>卷期：</strong><span id="modalIssue"></span></p>
-            <p style="margin-bottom: 8px;"><strong>年份：</strong><span id="modalYear"></span></p>
-            <p style="margin-bottom: 8px;"><strong>馆藏信息：</strong><span id="modalCollection"></span></p>
-            <p style="margin-bottom: 8px;"><strong>数据来源：</strong><span id="modalSource"></span></p>
+            <h2 id="modalTitle"></h2>
+            <p><strong>所属刊物：</strong><span id="modalJournal"></span></p>
+            <p><strong>作者：</strong><span id="modalAuthor"></span></p>
+            <p><strong>卷期：</strong><span id="modalIssue"></span></p>
+            <p><strong>年份：</strong><span id="modalYear"></span></p>
+            <p><strong>馆藏信息：</strong><span id="modalCollection"></span></p>
+            <p><strong>数据来源：</strong><span id="modalSource"></span></p>
         </div>
     </div>
 
+    <!-- 引入 Leaflet 地图 JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // =========================================================
-        // 【刊物信息区】
+        // 【第一步：在这里粘贴你原来的所有数据】
+        // 把原来文件里的 journalsInfoData 整个数组复制过来替换下面这个
         // =========================================================
 const journalsInfoData = [
         {
@@ -237,7 +279,21 @@ const journalsInfoData = [
             time: "1937-不详",
             place: "成都",
             desc: "《中华月刊》1937年创刊于重庆，共出版3期。具体出版信息不详，从馆藏情况（重庆图书馆）及同时期期刊背景推断，该刊应为抗战全面爆发前夕或初期出版的综合性或妇女类刊物。其短暂的发刊历程见证了全面抗战爆发前夕出版界的动荡与坚持，作为民国期刊数据库中的稀见品种，具有版本收藏与历史研究价值。"
-        }
+        },
+        {
+                name: "《妇女月刊》",
+                org: "妇女月刊社",
+                time: "1941-1948",
+                place: "重庆",
+                desc: "《妇女月刊》是1941年9月在重庆创刊的妇女文学刊物，由妇女月刊社主办，陆翰芩、林苑文、陆晶清等人编辑，出版周期为月刊。该刊创办目的是开创一片让妇女同志们倾吐和控诉的园地，让封建的罪恶暴露出来，并提供理论和常识供妇女同志工作研究与生活参考。设有妇女消息、论著、短评、通讯、特写、科学小品、文艺、家庭指导、读者园地、杂俎等栏目，内容涵盖妇女参政、儿童性教育、国内外女性事件及科技知识传播，刊载《救救孩子！为儿童节而作》《宪法小评》《主妇的末日》等文章，报道女科学家何泽慧发现铀分裂的科研新闻，介绍闽北、台湾、西藏、广西等地妇女生活通讯。主要撰稿人包括宗白华、曹诚英、赖素心、吴越、寒梅、亚萍、寒波、彭道真等。 该刊1945年11月第4卷第6期停刊，1946年11月复刊后迁至南京续刊，卷期延续，1948年11月第7卷第5期终刊。"
+            },
+            {
+                name: "《妇女正谊周刊》",
+                org: "成都市妇女会",
+                time: "1938-1939",
+                place: "成都",
+                desc: "1938年创刊，为国民党成都市妇女会刊物，刊头由陈公博题词。社长兼经理何知言，总编辑胡楚女，编辑李旭平、赵瑜卿、史志均，主笔范玉梅、王一苇，等国民党成都市妇女会主办；倡议妇女参与抗战救亡活动。"
+            }
         ];
         // =========================================================
         // 【文章数据区】
@@ -5288,10 +5344,109 @@ const articlesData = [
             { title: "训育通则", author: "", journal: "《中华月刊》", issue: "第一卷第三期", year: "1937", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
             { title: "编完以后", author: "", journal: "《中华月刊》", issue: "第一卷第三期", year: "1937", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
             { title: "投稿简章", author: "", journal: "《中华月刊》", issue: "第一卷第三期", year: "1937", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
-            { title: "本刊启事", author: "", journal: "《中华月刊》", issue: "第一卷第三期", year: "1937", collection: "重庆图书馆", source: "近代妇女期刊资料库" }
+            { title: "本刊启事", author: "", journal: "《中华月刊》", issue: "第一卷第三期", year: "1937", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+ { title: "发动妇女总动员", author: "胡楚女", journal: "《妇女正谊周刊》", issue: "第一卷第一期", year: "1938", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "成都市妇女会一年来工作概况", author: "何知言", journal: "《妇女正谊周刊》", issue: "第一卷第一期", year: "1938", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "我们对于抗战的认识", author: "李旭萍", journal: "《妇女正谊周刊》", issue: "第一卷第一期", year: "1938", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "非常时期中对成都市妇女之希望", author: "张泽辉", journal: "《妇女正谊周刊》", issue: "第一卷第二期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "女同胞们，觉悟吧！", author: "钱子牧", journal: "《妇女正谊周刊》", issue: "第一卷第二期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "募捐救国", author: "钱润身", journal: "《妇女正谊周刊》", issue: "第一卷第二期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "成都市妇女会一周内工作简报", author: "何知言", journal: "《妇女正谊周刊》", issue: "第一卷第二期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "国难", author: "鲜志高", journal: "《妇女正谊周刊》", issue: "第一卷第二期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "人间地狱(生活写实）", author: "小深", journal: "《妇女正谊周刊》", issue: "第一卷第二期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "妇女当前的责任", author: "林亚华", journal: "《妇女正谊周刊》", issue: "第一卷第二期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "说风", author: "林秀云", journal: "《妇女正谊周刊》", issue: "第一卷第二期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "妇女消息", author: "", journal: "《妇女正谊周刊》", issue: "第一卷第二期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "编者的话", author: "楚女", journal: "《妇女正谊周刊》", issue: "第一卷第二期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "汪先生休矣！", author: "胡楚女", journal: "《妇女正谊周刊》", issue: "第一卷第三期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "谈谈妇女参政的需要", author: "何知言", journal: "《妇女正谊周刊》", issue: "第一卷第三期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "怎样做个真正「摩登」的妇女？", author: "英", journal: "《妇女正谊周刊》", issue: "第一卷第三期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "由「文盲」谈到「人才」", author: "瑜卿", journal: "《妇女正谊周刊》", issue: "第一卷第三期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "市妇女会一周内工作简报", author: "知言", journal: "《妇女正谊周刊》", issue: "第一卷第三期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "平射炮", author: "炮手", journal: "《妇女正谊周刊》", issue: "第一卷第三期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "市妇女会答复两封无名信", author: "", journal: "《妇女正谊周刊》", issue: "第一卷第三期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "妇女座谈会", author: "胡楚女", journal: "《妇女正谊周刊》", issue: "第一卷第五期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "抗争期中妇女们最能做得好而最有效的工作", author: "磐", journal: "《妇女正谊周刊》", issue: "第一卷第五期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "慰问与抗战的意义", author: "何知言", journal: "《妇女正谊周刊》", issue: "第一卷第五期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "市妇女会一周工作报告", author: "魏德瑛", journal: "《妇女正谊周刊》", issue: "第一卷第五期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "再论成都市市妇女与义卖活动", author: "胡楚女", journal: "《妇女正谊周刊》", issue: "第一卷第六期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "怎样脱离奴隶化的女性而达到男女平权", author: "译", journal: "《妇女正谊周刊》", issue: "第一卷第六期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "婚变，为什么这样多？", author: "何知言", journal: "《妇女正谊周刊》", issue: "第一卷第六期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+            { title: "市妇女会一周内工作报告", author: "帼英", journal: "《妇女正谊周刊》", issue: "第一卷第六期", year: "1939", collection: "四川省图书馆", source: "近代妇女期刊资料库" },
+
+            // 最新的《妇女月刊》数据（节选展示，包含全部栏目）
+            { title: "卞拉黛维夫人之言", author: "寒波", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "创刊话：今天，这一册薄薄的刊物诞生到人间......", author: "", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "疏散：英国一九四一年的一个大问题", author: "考尔 阮一成", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "绘画与时空的关系", author: "张蒨英", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "妈妈！我是那里来的", author: "青子", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "奖励生育与减少死亡", author: "刘蘅静", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "根据遗传原理论女子与民族复兴", author: "曹诚英", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "杨嫂日记", author: "亚舜", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "谈谈法国妇女", author: "黄若瑛", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "熟人（每一段完）", author: "胡兰哇", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "一月大事记(七月十五日至八月十五日)……", author: "", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "塔布衣夫人的自述:一个女记者的成名记", author: "段雨", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "西江月(暮秋夜雨滴宿白沙马项垭)[诗词]", author: "", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "“解除了没有”——偶语之一", author: "寒", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "闲话数学", author: "劳君展", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "食粮上一笔很大的浪费", author: "美愉", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "临江仙(割甲状腺之前)[诗词]", author: "", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "喜雨[诗歌]", author: "佩声", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "战时英国妇女:织掩蔽枪炮的线网", author: "惠珠", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "知识妇女之三重责任", author: "陆翰芩", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "没有痛苦的分娩", author: "绿云", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "“寄生草”读后随笔", author: "徐绍清", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "忆浙江金耐先女士", author: "王映霞", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "甚矣人之患在不好为人师也", author: "", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "文坛点滴:谢冰心女士近养疴歌乐山…", author: "", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "大时代的孩子们:川省各难童教养机关巡礼", author: "黄节文", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "一个未完成的理想", author: "林苑文", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "“大姐我告诉你”", author: "惠子", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "妇女动态:中央组织部妇女运动委员会近与中央大学联合组织暑期女生社会服务队……", author: "", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "从“青年”说到“学校”:给在学的女青年", author: "陆晶清", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "培养阅读的判断力", author: "一旭", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "香洪女佣侧写", author: "占不律", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "小孩子为什么爱哭", author: "素人", journal: "《妇女月刊》", issue: "第一卷第一期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "妇女与读书", author: "胡秋原", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "你可曾惩罚过孩子", author: "景容", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "男女平等了?:论政大本届招考不收女生", author: "钦青", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "我们的工作作风", author: "纪清漪", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "奖励生育与知识妇女", author: "楼亦文", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "妇女动态:蒋夫人于国庆日对美播讲……", author: "", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "中华儿女[诗歌]", author: "芷京", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "一个理想的妇女工作区:大小凉山", author: "冯云仙", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "雨:巴山夜雨……", author: "山石", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "还要忍耐着吗?", author: "", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "熟人(续)", author: "胡兰佳", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "风波(独幕剧)(未完)", author: "星德", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "如何做妇女运动", author: "朱家骅", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "“穷”与“懒”", author: "素人", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "归衣集:随张善子划师赴富老利达州:[诗词]", author: "佩声", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "你所要知道的我们:中政校大学部女生生活剪影", author: "段雨", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "归衣集·留美杂吟·西渡舟中·其一[诗词]", author: "佩声、王德箴", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "杨嫂日记(续)", author: "亚舜", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "编辑室:这一期篇幅比创刊号增加了三分之一……", author: "", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "归衣集:和峨山伏虎寺签诗(廿八、八、) :[诗词]", author: "佩声", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "归衣集·水调歌头(廿八)[诗词]", author: "佩声", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "归衣集·好事近(归依廿八、八、卅)[诗词]", author: "佩声", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "天灾抑人祸?", author: "寒波", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "归衣集·南歌子(廿八)[诗词]", author: "佩声", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "向中央献议:从苏联解放妇女的成就上说起", author: "袅波", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "归衣集:好事近(峨山秋夜雨廿八、八、廿八,):[诗词]", author: "佩声", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "归衣集:习政于驻美陆军武官处:[诗词]", author: "佩声", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "从谋事说到做事:给职业妇女", author: "陆晶清", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "学校应否讲性问题?", author: "林苑文", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "文坛点滴:剧作家赵清阁女士现任职于教科书编辑委员会著作甚勤……", author: "", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "归衣集·归国[诗词]", author: "佩声", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "李公馆的猫", author: "老薇", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "大事记(八月十六日至九月十五日):罗斯福在游艇招待记者发表谈话称此次与英首会谈…", author: "", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "“女权作者华尔斯顿”", author: "波萍", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "大蒜:古时大蒜产于胡地……", author: "吴木兰", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" },
+            { title: "谈日本女人", author: "朱云影", journal: "《妇女月刊》", issue: "第一卷第二期", year: "1941", collection: "重庆图书馆", source: "近代妇女期刊资料库" }
         ];
-        // =========================================================
-        // 以下为核心逻辑，自动识别渲染，无需修改
+   // =========================================================
+        // 【第二步：无需修改，以下为页面核心逻辑】
         // =========================================================
         const journalsData = journalsInfoData.map(info => {
             return {
@@ -5300,6 +5455,9 @@ const articlesData = [
                 articles: articlesData.filter(a => a.journal === info.name)
             };
         });
+
+        // 地图变量（全局）
+        let map = null;
 
         function showPage(pageName) {
             document.querySelectorAll('[id^="page-"]').forEach(el => el.style.display = 'none');
@@ -5317,18 +5475,74 @@ const articlesData = [
                 document.getElementById('page-articles').style.display = 'block';
                 document.getElementById('nav-articles').classList.add('active');
                 renderArticles(articlesData);
+            } else if (pageName === 'map') {
+                document.getElementById('page-map').style.display = 'block';
+                document.getElementById('nav-map').classList.add('active');
+                initMap(); // 初始化地图
             }
         }
 
+        // ==========================================
+        // 地图核心逻辑
+        // ==========================================
+             function initMap() {
+            // 只保留成都和重庆的坐标
+            const geoStats = {
+                '重庆': { coord: [29.5630, 106.5516], count: 0 },
+                '成都': { coord: [30.5728, 104.0668], count: 0 }
+            };
+
+            // 遍历你的数据，只要包含“重庆”或“成都”就计数
+            articlesData.forEach(item => {
+                const c = item.collection || '';
+                if (c.includes('重庆')) geoStats['重庆'].count++;
+                else if (c.includes('成都')) geoStats['成都'].count++;
+            });
+
+            if (map !== null) {
+                map.eachLayer(layer => {
+                    if (layer instanceof L.CircleMarker) map.removeLayer(layer);
+                });
+                return;
+            }
+
+            // 初始化地图，中心点设在成渝中间，缩放级别设为7（刚好放大看川渝）
+            map = L.map('leaflet-map').setView([30.0, 105.5], 7);
+
+            // 加载高德底图
+            L.tileLayer('https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+                attribution: '&copy; 高德地图',
+                maxZoom: 18
+            }).addTo(map);
+
+            // 打点
+            for (const [city, data] of Object.entries(geoStats)) {
+                if (data.count > 0) {
+                    let radius = 15 + Math.min(data.count / 20, 30); // 圆圈稍微调大一点
+                    L.circleMarker(data.coord, {
+                        radius: radius, 
+                        fillColor: "#8b5a2b", 
+                        color: "#fff", 
+                        weight: 2, 
+                        opacity: 1, 
+                        fillOpacity: 0.8
+                    }).addTo(map).bindPopup(`<b>${city}</b><br>收录文献：${data.count} 篇`);
+                }
+            }
+        }
+
+        // ==========================================
+        // 渲染逻辑
+        // ==========================================
         function renderHomeJournals() {
             const container = document.getElementById('home-journals');
             let html = '';
-            journalsData.forEach(journal => {
+            journalsData.forEach((journal, index) => {
                 html += `
-                    <div class="card" onclick="viewJournalDetail('${journal.name}')">
+                    <div class="card" onclick="viewJournalDetail('${journal.name}')" style="animation-delay: ${index * 0.05}s">
                         <h3>${journal.name}</h3>
-                        <p>收录文章：${journal.articles.length} 篇</p>
-                        <p>出版地：${journal.info.place}</p>
+                        <p>📚 收录文章：${journal.articles.length} 篇</p>
+                        <p>📍 出版地：${journal.info.place}</p>
                     </div>
                 `;
             });
@@ -5338,12 +5552,12 @@ const articlesData = [
         function renderAllJournals() {
             const container = document.getElementById('all-journals');
             let html = '';
-            journalsData.forEach(journal => {
+            journalsData.forEach((journal, index) => {
                 html += `
-                    <div class="card" onclick="viewJournalDetail('${journal.name}')">
+                    <div class="card" onclick="viewJournalDetail('${journal.name}')" style="animation-delay: ${index * 0.05}s">
                         <h3>${journal.name}</h3>
-                        <p>收录文章：${journal.articles.length} 篇</p>
-                        <p>出版地：${journal.info.place}</p>
+                        <p>📚 收录文章：${journal.articles.length} 篇</p>
+                        <p>📍 出版地：${journal.info.place}</p>
                     </div>
                 `;
             });
@@ -5364,20 +5578,20 @@ const articlesData = [
 
             const container = document.getElementById('detail-articles');
             let html = '';
-            journal.articles.forEach(article => {
-                html += generateArticleCard(article);
+            journal.articles.forEach((article, index) => {
+                html += generateArticleCard(article, index);
             });
             container.innerHTML = html;
         }
 
-        function generateArticleCard(article) {
+        function generateArticleCard(article, index) {
             return `
-                <div class="card article-card">
+                <div class="card article-card" style="animation-delay: ${index * 0.02}s">
                     <h3>${article.title}</h3>
                     <p>👤 作者：${article.author || '佚名'}</p>
                     <p>📚 卷期：${article.issue}</p>
                     <p>📅 年份：${article.year}</p>
-                    <button class="btn" style="margin-top:10px; padding:5px 10px; cursor:pointer;" onclick="showDetail('${article.title}')">查看详情</button>
+                    <button class="btn" onclick="showDetail('${article.title}')">查看详情</button>
                 </div>
             `;
         }
@@ -5387,32 +5601,46 @@ const articlesData = [
             const stats = document.getElementById('article-stats');
             
             if (data.length === 0) {
-                container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:#94a3b8;">没有找到匹配的文章</div>`;
+                container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:#94a3b8; font-size: 16px;">😕 没有找到匹配的文章</div>`;
                 stats.innerHTML = `共找到 0 篇文章`;
                 return;
             }
 
+            // 性能保护
+            const limit = 200;
+            const displayData = data.slice(0, limit);
+
             let html = '';
-            data.forEach(article => {
-                html += generateArticleCard(article);
+            displayData.forEach((article, index) => {
+                html += generateArticleCard(article, index);
             });
             container.innerHTML = html;
-            stats.innerHTML = `共找到 ${data.length} 篇文章`;
+            
+            let statsText = `共找到 <strong>${data.length}</strong> 篇文章`;
+            if (data.length > limit) {
+                statsText += `（为保证流畅，仅展示前 ${limit} 篇，请使用搜索缩小范围）`;
+            }
+            stats.innerHTML = statsText;
         }
 
-        function searchArticles() {
-            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
-            if (!keyword) {
-                renderArticles(articlesData);
-                return;
-            }
-            const filtered = articlesData.filter(a => 
-                a.title.toLowerCase().includes(keyword) || 
-                (a.author && a.author.toLowerCase().includes(keyword)) ||
-                a.journal.toLowerCase().includes(keyword)
-            );
-            renderArticles(filtered);
-        }
+        // 输入即搜
+        let debounceTimer;
+        document.getElementById('searchInput').addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                const keyword = this.value.trim().toLowerCase();
+                if (!keyword) {
+                    renderArticles(articlesData);
+                    return;
+                }
+                const filtered = articlesData.filter(a => 
+                    a.title.toLowerCase().includes(keyword) || 
+                    (a.author && a.author.toLowerCase().includes(keyword)) ||
+                    a.journal.toLowerCase().includes(keyword)
+                );
+                renderArticles(filtered);
+            }, 300);
+        });
 
         function resetSearch() {
             document.getElementById('searchInput').value = '';
@@ -5426,18 +5654,31 @@ const articlesData = [
             document.getElementById('modalAuthor').innerText = article.author || '佚名';
             document.getElementById('modalIssue').innerText = article.issue;
             document.getElementById('modalYear').innerText = article.year;
-            document.getElementById('modalCollection').innerText = article.collection;
-            document.getElementById('modalSource').innerText = article.source;
-            document.getElementById('myModal').style.display = 'flex';
+            document.getElementById('modalCollection').innerText = article.collection || '未知';
+            document.getElementById('modalSource').innerText = article.source || '未知';
+            
+            const modal = document.getElementById('myModal');
+            modal.style.display = 'flex';
+            void modal.offsetWidth; 
+            modal.classList.add('show');
         }
 
         function closeModal() {
-            document.getElementById('myModal').style.display = 'none';
+            const modal = document.getElementById('myModal');
+            modal.classList.remove('show');
+            setTimeout(() => { modal.style.display = 'none'; }, 300);
         }
 
         window.onload = function() {
             showPage('home');
         };
+        
+        window.onclick = function(event) {
+            const modal = document.getElementById('myModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
     </script>
 </body>
 </html>
